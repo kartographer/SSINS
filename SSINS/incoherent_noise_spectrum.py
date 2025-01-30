@@ -5,6 +5,7 @@ The incoherent noise spectrum class.
 import numpy as np
 import os
 from pyuvdata import UVFlag
+from pyuvdata.parameter import UVParameter
 import yaml
 from functools import reduce
 import warnings
@@ -53,6 +54,31 @@ class INS(UVFlag):
                 pyuvdata.
         """
 
+        # Adding SSINS-specific UVParameters
+        desc = (
+            "An array that is initially equal to the z-score of each data point. "
+            "During flagging, the entries are assigned according to their z-score at "
+            "the time of their flagging. Shape is (Ntimes, Nfreqs, Npols), dtype float."
+        )
+        self._sig_array = UVParameter(
+            "sig_array",
+            description=desc,
+            form=("Ntimes", "Nfreqs", "Npols"),
+            expected_type=float,
+            required=False,
+        )
+
+        desc = (
+            "An array containing the z-scores of the data in the incoherent noise "
+            "spectrum. Shape is (Ntimes, Nfreqs, Npols), dtype is float."
+        )
+        self._metric_ms = UVParameter(
+            "metric_ms",
+            description=desc,
+            form=("Ntimes", "Nfreqs", "Npols"),
+            expected_type=float,
+            required=False,
+        )
 
         self.set_extra_params(order=order, spectrum_type=spectrum_type, use_integration_weights=use_integration_weights,
                               nsample_default=nsample_default, mask_file=mask_file, match_events_file=match_events_file)
@@ -633,7 +659,7 @@ class INS(UVFlag):
 
         ins.metric_array.mask = np.copy(mask_uvf.flag_array)
         # In case this is called in the middle of the constructor.
-        if hasattr(ins, 'metric_ms'):
+        if ins.metric_ms is not None:
             ins.metric_ms = ins.mean_subtract()
 
         if not inplace:
@@ -700,7 +726,13 @@ class INS(UVFlag):
                 its flag_array
         """
         mask_uvf_copy = self.copy()
+        # Spoof the required flag so that to_flag doesn't clear these attributes
+        # (which used to NOT be UVParameters).
+        mask_uvf_copy._metric_ms.required = self.metric_ms is not None
+        mask_uvf_copy._sig_array.required = self.sig_array is not None
         mask_uvf_copy.to_flag()
+        mask_uvf_copy._metric_ms.required = False
+        mask_uvf_copy._sig_array.required = False
         mask_uvf_copy.flag_array = np.copy(self.metric_array.mask)
 
         return(mask_uvf_copy)
