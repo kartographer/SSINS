@@ -1,6 +1,8 @@
 # SSINS Change Log
 
 ## Unreleased
+- Converted `sig_array` and `metric_ms` to UVParameters so as to enable future
+compatibility with UVFlag (the base class for INS).
 - Added handling for negative `sig_thresh` such that when set, the associated shape will only trigger
 on a negative sig smaller than `sig_thresh`. Behavior for positive `sig_thresh` is unchanged;
 this will continue to use the absolute value of sig. Setting a negative `sig_thresh` for the
